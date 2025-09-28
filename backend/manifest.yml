@@ -1,0 +1,223 @@
+name: PlatePalette
+
+entities:
+  users:
+    authenticable: true
+    properties:
+      - name: name
+        type: string
+        validation:
+          required: true
+      - name: email
+        type: email
+        validation:
+          required: true
+      - name: bio
+        type: richText
+      - name: avatar
+        type: image
+        options:
+          sizes:
+            thumbnail:
+              width: 100
+              height: 100
+            profile:
+              width: 400
+              height: 400
+      - name: role
+        type: choice
+        options:
+          values: [customer, chef, admin]
+        default: customer
+    policies:
+      create:
+        - access: admin
+      read:
+        - access: public
+      update:
+        - access: restricted
+          allow: users
+          condition: self
+        - access: admin
+      delete:
+        - access: admin
+      signup:
+        - access: public
+
+  recipes:
+    properties:
+      - name: title
+        type: string
+        validation:
+          required: true
+          minLength: 5
+      - name: description
+        type: textarea
+      - name: ingredients
+        type: richText
+        validation:
+          required: true
+      - name: instructions
+        type: richText
+        validation:
+          required: true
+      - name: mainImage
+        type: image
+        validation:
+          required: true
+        options:
+          sizes:
+            small:
+              width: 400
+            large:
+              width: 1024
+      - name: prepTime
+        type: number
+        validation:
+          min: 0
+      - name: price
+        type: money
+        options:
+          currency: 'USD'
+        validation:
+          min: 0
+      - name: difficulty
+        type: choice
+        options:
+          values: [Easy, Medium, Hard]
+      - name: isPublished
+        type: boolean
+        default: false
+    belongsTo:
+      - name: chef
+        entity: users
+    belongsToMany:
+      - name: categories
+        entity: categories
+    policies:
+      create:
+        - access: restricted
+          allow: users
+          condition: "user.role === 'chef' || user.role === 'admin'"
+      read:
+        - access: public
+      update:
+        - access: restricted
+          allow: users
+          condition: self
+        - access: admin
+      delete:
+        - access: restricted
+          allow: users
+          condition: self
+        - access: admin
+
+  categories:
+    properties:
+      - name: name
+        type: string
+        validation:
+          required: true
+      - name: image
+        type: image
+    belongsToMany:
+      - name: recipes
+        entity: recipes
+    policies:
+      create:
+        - access: admin
+      read:
+        - access: public
+      update:
+        - access: admin
+      delete:
+        - access: admin
+
+  reviews:
+    properties:
+      - name: rating
+        type: number
+        validation:
+          required: true
+          min: 1
+          max: 5
+      - name: comment
+        type: textarea
+        validation:
+          required: true
+      - name: reviewDate
+        type: timestamp
+        default: now
+    belongsTo:
+      - name: reviewer
+        entity: users
+      - name: recipe
+        entity: recipes
+    policies:
+      create:
+        - access: restricted
+          allow: users
+      read:
+        - access: public
+      update:
+        - access: restricted
+          allow: users
+          condition: self
+      delete:
+        - access: restricted
+          allow: users
+          condition: self
+        - access: admin
+
+  orders:
+    properties:
+      - name: totalAmount
+        type: money
+        options:
+          currency: 'USD'
+      - name: status
+        type: choice
+        options:
+          values: [Pending, Preparing, Delivered, Cancelled]
+        default: Pending
+      - name: deliveryAddress
+        type: textarea
+      - name: orderDate
+        type: timestamp
+        default: now
+    belongsTo:
+      - name: customer
+        entity: users
+    belongsToMany:
+      - name: recipes
+        entity: recipes
+    policies:
+      create:
+        - access: restricted
+          allow: users
+      read:
+        - access: restricted
+          allow: users
+          condition: self
+        - access: admin
+      update:
+        - access: admin
+      delete:
+        - access: admin
+
+endpoints:
+  health:
+    path: /health
+    method: GET
+    handler: health
+    policies:
+      - access: public
+
+
+# Health check endpoint for connection testing
+endpoints:
+  health:
+    path: /api/health
+    method: GET
+    policies: []
+    handler: healthCheck
